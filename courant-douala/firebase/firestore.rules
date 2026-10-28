@@ -1,0 +1,25 @@
+rules_version = '2';
+// Courant Douala : un document par shard, shards/{0..3} = { q: { <quartier>: { p: {...}, w: {...} } } }
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /shards/{shard} {
+      allow read: if true;
+
+      // Écriture : utilisateur anonyme authentifié, un seul quartier modifié à la fois,
+      // aucune suppression de quartier existant, structure minimale vérifiée.
+      allow create, update: if request.auth != null
+        && shard in ['0', '1', '2', '3']
+        && request.resource.data.keys().hasOnly(['q'])
+        && request.resource.data.q is map
+        && (resource == null
+            || (request.resource.data.q.keys().hasAll(resource.data.q.keys())
+                && request.resource.data.q.diff(resource.data.q).affectedKeys().size() <= 1))
+        && request.resource.data.q.size() <= 40;
+
+      allow delete: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

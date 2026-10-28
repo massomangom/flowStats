@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Courant Douala</string>
+    <string name="channel_name">Courant et eau de mon quartier</string>
+    <string name="channel_desc">Alerte quand le courant ou l\'eau est coupé ou revient dans votre quartier</string>
+</resources>

@@ -1,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Goutte d'eau en arrière-plan -->
+    <path android:fillColor="#3DA5FF"
+        android:pathData="M66,36 C66,36 80,52 80,62 C80,70 73.7,76 66,76 C58.3,76 52,70 52,62 C52,52 66,36 66,36 Z" />
+    <!-- Éclair -->
+    <path android:fillColor="#FFC83D"
+        android:strokeColor="#0F1B2D" android:strokeWidth="2.5" android:strokeLineJoin="round"
+        android:pathData="M50,26 L32,58 L46,58 L40,84 L64,48 L50,48 L58,26 Z" />
+</vector>

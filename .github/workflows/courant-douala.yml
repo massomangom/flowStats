@@ -1,0 +1,72 @@
+# Compile, teste et (optionnel) publie Courant Douala sur Google Play.
+# - À chaque push touchant courant-douala/ : tests + APK debug.
+# - Sur un tag "courant-v*" (ex. courant-v1.0.1) : AAB signé + envoi sur Google Play
+#   si les secrets sont configurés (voir courant-douala/README.md).
+name: Courant Douala
+
+on:
+  push:
+    paths: ["courant-douala/**", ".github/workflows/courant-douala.yml"]
+    tags: ["courant-v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      HAS_PLAY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+    defaults:
+      run:
+        working-directory: courant-douala
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Tests + APK debug
+        run: ./gradlew testDebugUnitTest assembleDebug --console=plain
+
+      - name: Préparer les secrets de release
+        if: startsWith(github.ref, 'refs/tags/courant-v')
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > upload.jks
+          echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
+
+      - name: AAB signé
+        if: startsWith(github.ref, 'refs/tags/courant-v')
+        env:
+          KEYSTORE_FILE: upload.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
+          ADMOB_BANNER_ID: ${{ secrets.ADMOB_BANNER_ID }}
+          ADMOB_INTERSTITIAL_ID: ${{ secrets.ADMOB_INTERSTITIAL_ID }}
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          export VERSION_NAME="${GITHUB_REF_NAME#courant-v}"
+          ./gradlew bundleRelease --console=plain
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: courant-douala
+          path: |
+            courant-douala/app/build/outputs/apk/debug/*.apk
+            courant-douala/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: ignore
+
+      - name: Envoi Google Play (piste interne)
+        if: startsWith(github.ref, 'refs/tags/courant-v') && env.HAS_PLAY == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.massomangom.courantdouala
+          releaseFiles: courant-douala/app/build/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
